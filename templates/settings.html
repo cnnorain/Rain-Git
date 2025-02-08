@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <!-- Token设置 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Token 设置</h5>
+            </div>
+            <div class="card-body">
+                <form id="tokenForm">
+                    <div class="mb-3">
+                        <label for="githubToken" class="form-label">GitHub Token</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="githubToken" value="{{ tokens.github_token }}">
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('githubToken')">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            在 <a href="https://github.com/settings/tokens" target="_blank" class="text-decoration-none">
+                                GitHub Personal Access Tokens <i class="bi bi-box-arrow-up-right"></i>
+                            </a> 中获取
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="giteeToken" class="form-label">Gitee Token</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="giteeToken" value="{{ tokens.gitee_token }}">
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('giteeToken')">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            在 <a href="https://gitee.com/profile/personal_access_tokens" target="_blank" class="text-decoration-none">
+                                Gitee 私人令牌 <i class="bi bi-box-arrow-up-right"></i>
+                            </a> 中获取
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">保存设置</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- 管理员账号设置 -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">管理员账号设置</h5>
+            </div>
+            <div class="card-body">
+                <form id="adminForm">
+                    <div class="mb-3">
+                        <label for="adminUsername" class="form-label">用户名</label>
+                        <input type="text" class="form-control" id="adminUsername" 
+                               pattern="^[a-zA-Z0-9.][a-zA-Z0-9._-]{4,17}$" required>
+                        <div class="form-text">
+                            <ul class="mb-0">
+                                <li>只能包含字母、数字、下划线(_)、中划线(-)、英文句号(.) 长度为5-18个字符</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="adminPassword" class="form-label">密码</label>
+                        <input type="password" class="form-control" id="adminPassword" 
+                               pattern="^[a-zA-Z0-9.][a-zA-Z0-9._-]{4,17}$" required>
+                        <div class="form-text">
+                            <ul class="mb-0">
+                                <li>只能包含字母、数字、下划线(_)、中划线(-)、英文句号(.) 长度为5-18个字符</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">保存管理员设置</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePassword(inputId) {
+    const input = document.getElementById(inputId);
+    if (input.type === "password") {
+        input.type = "text";
+    } else {
+        input.type = "password";
+    }
+}
+
+document.getElementById('tokenForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const githubToken = document.getElementById('githubToken').value;
+    const giteeToken = document.getElementById('giteeToken').value;
+    
+    try {
+        const response = await fetch('/api/settings/tokens', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                github_token: githubToken,
+                gitee_token: giteeToken
+            })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            alert('设置已保存');
+            // 刷新仓库列表
+            socket.emit('refresh_repos');
+        } else {
+            alert('保存设置失败: ' + result.message);
+        }
+    } catch (error) {
+        alert('保存设置时出错: ' + error);
+    }
+});
+
+// 处理管理员设置表单提交
+document.getElementById('adminForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const username = document.getElementById('adminUsername').value;
+    const password = document.getElementById('adminPassword').value;
+    
+    // 验证格式
+    const pattern = /^[a-zA-Z0-9.][a-zA-Z0-9._-]{4,17}$/;
+    if (!pattern.test(username)) {
+        alert('用户名格式不正确！');
+        return;
+    }
+    if (!pattern.test(password)) {
+        alert('密码格式不正确！');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/settings/admin', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password
+            })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            alert('管理员设置已保存');
+            // 清空密码输入框
+            document.getElementById('adminPassword').value = '';
+        } else {
+            alert('保存管理员设置失败: ' + result.message);
+        }
+    } catch (error) {
+        alert('保存管理员设置时出错: ' + error);
+    }
+});
+</script>
+{% endblock %} 

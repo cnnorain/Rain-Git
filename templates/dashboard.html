@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- 添加 highlight.js 的 CSS 和 JS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+{% set tokens = config_manager.get_tokens() %}
+{% if not tokens.github_token or not tokens.gitee_token %}
+<div class="alert alert-warning" role="alert">
+    请先在<a href="{{ url_for('settings') }}" class="alert-link">设置页面</a>配置 GitHub 和 Gitee 的访问令牌。
+</div>
+{% endif %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>GitHub 仓库</span>
+                <div>
+                    <button class="btn btn-sm btn-success" onclick="showCreateRepoModal('github')">新建</button>
+                    <button class="btn btn-sm btn-primary" onclick="refreshGithubRepos()">刷新</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="github-repos">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Gitee 仓库</span>
+                <div>
+                    <button class="btn btn-sm btn-success" onclick="showCreateRepoModal('gitee')">新建</button>
+                    <button class="btn btn-sm btn-primary" onclick="refreshGiteeRepos()">刷新</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="gitee-repos">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 创建仓库模态框 -->
+<div class="modal fade" id="createRepoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">创建新仓库</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createRepoForm">
+                    <input type="hidden" id="platformType" name="platform">
+                    <div class="mb-3">
+                        <label for="repoName" class="form-label">仓库名称</label>
+                        <input type="text" class="form-control" id="repoName" required
+                               pattern="^[a-zA-Z0-9.][a-zA-Z0-9._-]{1,190}$" 
+                               title="仓库名称必须以字母、数字或点(.)开头，只能包含字母、数字、下划线(_)、中划线(-)、英文句号(.)，长度为2~191个字符">
+                        <div class="form-text">
+                            仓库名称必须以字母、数字或点(.)开头，只能包含字母、数字、下划线(_)、中划线(-)、英文句号(.)，长度为2~191个字符
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="repoDesc" class="form-label">仓库描述</label>
+                        <textarea class="form-control" id="repoDesc" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="repoPrivate">
+                            <label class="form-check-label" for="repoPrivate">
+                                私有仓库
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="initReadme">
+                            <label class="form-check-label" for="initReadme">
+                                初始化README.md
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="syncCreate">
+                            <label class="form-check-label" for="syncCreate">
+                                同步创建到另一个平台
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="createRepository()">创建</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 删除仓库模态框 -->
+<div class="modal fade" id="deleteRepoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">删除仓库</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="deleteRepoForm">
+                    <input type="hidden" id="deletePlatform" name="platform">
+                    <input type="hidden" id="deleteRepoId" name="repoId">
+                    <input type="hidden" id="deleteRepoName" name="repoName">
+                    <p>确定要删除仓库 <strong id="confirmRepoName"></strong> 吗？</p>
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        警告：此操作不可恢复！
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="syncDelete">
+                            <label class="form-check-label" for="syncDelete">
+                                同步删除另一个平台的同名仓库（如果存在）
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" onclick="deleteRepository()">删除</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑仓库模态框 -->
+<div class="modal fade" id="editRepoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">编辑仓库设置</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editRepoForm">
+                    <input type="hidden" id="editPlatform" name="platform">
+                    <input type="hidden" id="editRepoId" name="repoId">
+                    <input type="hidden" id="editOldRepoName" name="oldRepoName">
+                    <div class="mb-3">
+                        <label for="editRepoName" class="form-label">仓库名称</label>
+                        <input type="text" class="form-control" id="editRepoName" required
+                               pattern="^[a-zA-Z0-9.][a-zA-Z0-9._-]{1,190}$" 
+                               title="仓库名称必须以字母、数字或点(.)开头，只能包含字母、数字、下划线(_)、中划线(-)、英文句号(.)，长度为2~191个字符">
+                        <div class="form-text">
+                            仓库名称必须以字母、数字或点(.)开头，只能包含字母、数字、下划线(_)、中划线(-)、英文句号(.)，长度为2~191个字符
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editRepoDesc" class="form-label">仓库描述</label>
+                        <textarea class="form-control" id="editRepoDesc" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editRepoPrivate">
+                            <label class="form-check-label" for="editRepoPrivate">
+                                私有仓库
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editHasIssues">
+                            <label class="form-check-label" for="editHasIssues">
+                                启用 Issues
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editHasWiki">
+                            <label class="form-check-label" for="editHasWiki">
+                                启用 Wiki
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editHasProjects">
+                            <label class="form-check-label" for="editHasProjects">
+                                启用项目管理
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="syncEdit">
+                            <label class="form-check-label" for="syncEdit">
+                                同步修改另一个平台的同名仓库（如果存在）
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="updateRepository()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 克隆仓库模态框 -->
+<div class="modal fade" id="cloneRepoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">克隆/下载仓库</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">HTTPS克隆地址</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="httpsCloneUrl" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('httpsCloneUrl')">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">SSH克隆地址</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="sshCloneUrl" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('sshCloneUrl')">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <a id="downloadZipUrl" href="#" class="btn btn-primary" target="_blank">
+                        <i class="bi bi-download"></i> 下载ZIP压缩包
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 文件浏览模态框 -->
+<div class="modal fade" id="fileExplorerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-folder2-open"></i>
+                    <span id="repoNameTitle"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- 工具栏 -->
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-primary" onclick="navigateToPath('')">
+                            <i class="bi bi-house"></i> 根目录
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="refreshCurrentPath()">
+                            <i class="bi bi-arrow-clockwise"></i> 刷新
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" onclick="showUploadFileModal()">
+                            <i class="bi bi-upload"></i> 上传文件
+                        </button>
+                    </div>
+                    <div class="input-group input-group-sm" style="max-width: 300px;">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" id="fileSearch" 
+                               placeholder="搜索文件..." onkeyup="filterFiles()">
+                    </div>
+                </div>
+                
+                <!-- 文件路径导航 -->
+                <nav aria-label="breadcrumb" class="mb-3">
+                    <ol class="breadcrumb" id="fileBreadcrumb">
+                        <li class="breadcrumb-item active">根目录</li>
+                    </ol>
+                </nav>
+                
+                <!-- 文件列表 -->
+                <div id="fileList">
+                    <div class="list-group list-group-flush">
+                        <!-- 文件列表将通过 JavaScript 动态生成 -->
+                    </div>
+                </div>
+                
+                <!-- 文件内容预览 -->
+                <div id="fileContent" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0">
+                            <i class="bi bi-file-text"></i>
+                            <span id="fileContentTitle"></span>
+                        </h6>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="hideFileContent()">
+                            <i class="bi bi-arrow-left"></i> 返回
+                        </button>
+                    </div>
+                    <div class="border rounded bg-light p-3">
+                        <pre class="mb-0"><code id="fileContentCode" class="text-wrap"></code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 删除文件模态框 -->
+<div class="modal fade" id="deleteFileModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">删除文件</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="deleteFilePath">
+                <p>确定要删除<span id="deleteFileType">文件</span> <strong id="deleteFileName"></strong> 吗？</p>
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    警告：此操作不可恢复！
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" onclick="deleteFile()">删除</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 上传文件模态框 -->
+<div class="modal fade" id="uploadFileModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">上传文件</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadFileForm">
+                    <div class="mb-3">
+                        <label for="fileInput" class="form-label">选择文件</label>
+                        <input type="file" class="form-control" id="fileInput" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="commitMessage" class="form-label">提交信息</label>
+                        <input type="text" class="form-control" id="commitMessage" 
+                               placeholder="添加文件：xxx" required>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="syncUpload">
+                            <label class="form-check-label" for="syncUpload">
+                                同步上传到另一个平台
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="uploadFile()">上传</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/github.js') }}"></script>
+<script src="{{ url_for('static', filename='js/gitee.js') }}"></script>
+{% endblock %} 

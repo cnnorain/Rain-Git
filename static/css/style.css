@@ -1,0 +1,240 @@
+/* 全局样式 */
+html {
+    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;  /* IE and Edge */
+}
+
+/* 隐藏 Webkit 浏览器的滚动条 */
+html::-webkit-scrollbar {
+    display: none;
+}
+
+body {
+    background-color: #f8f9fa;
+    /* 设置最小高度为视口高度 */
+    min-height: 100vh;
+    /* 使用 flex 布局 */
+    display: flex;
+    flex-direction: column;
+    /* 隐藏所有可滚动元素的滚动条 */
+    * {
+        scrollbar-width: none;  /* Firefox */
+        -ms-overflow-style: none;  /* IE and Edge */
+    }
+    /* 隐藏所有可滚动元素的 Webkit 滚动条 */
+    *::-webkit-scrollbar {
+        display: none;
+    }
+    padding-top: 70px;
+}
+
+/* 主容器样式 */
+.container.mt-4 {
+    /* 让主内容区域自动填充剩余空间 */
+    flex: 1 0 auto;
+    /* 添加底部内边距，为底部导航条留出空间 */
+    padding-bottom: 100px;  /* 增加一点底部空间 */
+}
+
+/* 导航栏样式 */
+.navbar {
+    background: linear-gradient(to bottom, #343a40, #212529) !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* 导航链接样式 */
+.navbar .nav-link {
+    position: relative;
+    padding: 0.5rem 1rem;
+    margin: 0 0.2rem;
+    transition: all 0.3s ease;
+}
+
+/* 导航链接激活状态 */
+.navbar .nav-link.active {
+    color: #fff !important;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+/* 导航链接悬停效果 */
+.navbar .nav-link:hover {
+    color: #fff !important;
+    transform: translateY(-1px);
+}
+
+/* 导航链接激活状态下的悬停效果 */
+.navbar .nav-link.active:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* 底部导航条样式 */
+.navbar.fixed-bottom {
+    /* 移除固定高度 */
+    font-size: 0.9rem;
+    background: linear-gradient(to bottom, #343a40, #212529);
+    /* 设置为 flex-shrink: 0 防止压缩 */
+    flex-shrink: 0;
+    /* 移除底部边距 */
+    margin-bottom: 0;
+    /* 添加上边框 */
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    /* 添加阴影效果 */
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.15);
+    /* 添加内边距 */
+    padding: 8px 0;
+    /* 确保导航条始终在最上层 */
+    z-index: 1030;
+}
+
+.navbar.fixed-bottom .nav-link {
+    padding: 0.4rem 0.8rem;
+    color: rgba(255, 255, 255, 0.8);
+    transition: all 0.3s ease;
+    border-radius: 4px;
+    margin: 0 4px;
+}
+
+.navbar.fixed-bottom .nav-link:hover {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+/* 版本号样式 */
+.navbar.fixed-bottom .navbar-text {
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    padding: 0.4rem 0.8rem;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+/* 图标样式 */
+.navbar.fixed-bottom .bi {
+    font-size: 1.3em;
+    margin-right: 4px;
+    vertical-align: -2px;
+}
+
+/* GitHub 图标特殊样式 */
+.navbar.fixed-bottom .bi-github {
+    color: #fff;
+    margin-right: 0;
+    transition: transform 0.3s ease;
+}
+
+/* Gitee 图标特殊样式 */
+.navbar.fixed-bottom .gitee-icon {
+    color: #c71d23;
+    margin-right: 0;
+    transition: transform 0.3s ease;
+    vertical-align: -4px;
+}
+
+/* 图标悬停效果 */
+.navbar.fixed-bottom .nav-link:hover .bi,
+.navbar.fixed-bottom .nav-link:hover .gitee-icon {
+    transform: scale(1.2);
+}
+
+/* 调整链接样式 */
+.navbar.fixed-bottom .nav-link {
+    padding: 0.4rem;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 容器宽度与内容区域对齐 */
+.navbar.fixed-bottom .container {
+    max-width: 1140px;
+    padding-left: 15px;
+    padding-right: 15px;
+    margin: 0 auto;
+}
+
+/* 卡片样式 */
+.card {
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 仓库列表样式 */
+#github-repos,
+#gitee-repos {
+    min-height: 200px;
+}
+
+/* 仓库标题样式 */
+.card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* 可见性图标样式 */
+.card-title .bi {
+    font-size: 0.9em;
+    cursor: help;
+}
+
+/* 私有仓库图标悬停效果 */
+.bi-eye-slash-fill:hover {
+    color: #dc3545 !important;
+}
+
+/* 公开仓库图标悬停效果 */
+.bi-eye-fill:hover {
+    color: #198754 !important;
+}
+
+/* Token 设置页面样式 */
+.form-text a {
+    color: #0d6efd;
+    transition: all 0.2s ease;
+}
+
+.form-text a:hover {
+    color: #0a58ca;
+    text-decoration: underline !important;
+}
+
+.form-text .bi-box-arrow-up-right {
+    font-size: 0.8em;
+    margin-left: 2px;
+    vertical-align: -1px;
+}
+
+/* 退出按钮样式 */
+.btn-logout {
+    padding: 0.25rem 0.8rem;
+    font-size: 0.875rem;
+    border-radius: 4px;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+    color: #fff;
+    background-color: #dc3545;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.btn-logout .bi {
+    margin-right: 4px;
+    font-size: 1.1em;
+    vertical-align: -2px;
+}
+
+/* 退出按钮激活状态 */
+.btn-logout:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(220, 53, 69, 0.2);
+} 
